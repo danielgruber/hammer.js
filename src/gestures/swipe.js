@@ -1,34 +1,93 @@
 /**
- * Swipe
+ * @module gestures
+ */
+/**
  * triggers swipe events when the end velocity is above the threshold
- * @events  swipe, swipeleft, swiperight, swipeup, swipedown
+ * for best usage, set `preventDefault` (on the drag gesture) to `true`
+ * ````
+ *  hammertime.on("dragleft swipeleft", function(ev) {
+ *    console.log(ev);
+ *    ev.gesture.preventDefault();
+ *  });
+ * ````
+ *
+ * @class Swipe
+ * @static
+ */
+/**
+ * @event swipe
+ * @param {Object} ev
+ */
+/**
+ * @event swipeleft
+ * @param {Object} ev
+ */
+/**
+ * @event swiperight
+ * @param {Object} ev
+ */
+/**
+ * @event swipeup
+ * @param {Object} ev
+ */
+/**
+ * @event swipedown
+ * @param {Object} ev
  */
 Hammer.gestures.Swipe = {
-  name    : 'swipe',
-  index   : 40,
-  defaults: {
-    // set 0 for unlimited, but this can conflict with transform
-    swipe_min_touches: 1,
-    swipe_max_touches: 1,
-    swipe_velocity   : 0.7
-  },
-  handler : function swipeGesture(ev, inst) {
-    if(ev.eventType == Hammer.EVENT_END) {
-      // max touches
-      if(inst.options.swipe_max_touches > 0 &&
-        ev.touches.length < inst.options.swipe_min_touches &&
-        ev.touches.length > inst.options.swipe_max_touches) {
-        return;
-      }
+    name: 'swipe',
+    index: 40,
+    defaults: {
+        /**
+         * @property swipeMinTouches
+         * @type {Number}
+         * @default 1
+         */
+        swipeMinTouches: 1,
 
-      // when the distance we moved is too small we skip this gesture
-      // or we can be already in dragging
-      if(ev.velocityX > inst.options.swipe_velocity ||
-        ev.velocityY > inst.options.swipe_velocity) {
-        // trigger swipe events
-        inst.trigger(this.name, ev);
-        inst.trigger(this.name + ev.direction, ev);
-      }
+        /**
+         * @property swipeMaxTouches
+         * @type {Number}
+         * @default 1
+         */
+        swipeMaxTouches: 1,
+
+        /**
+         * horizontal swipe velocity
+         * @property swipeVelocityX
+         * @type {Number}
+         * @default 0.6
+         */
+        swipeVelocityX: 0.6,
+
+        /**
+         * vertical swipe velocity
+         * @property swipeVelocityY
+         * @type {Number}
+         * @default 0.6
+         */
+        swipeVelocityY: 0.6
+    },
+
+    handler: function swipeGesture(ev, inst) {
+        if(ev.eventType == EVENT_RELEASE) {
+            var touches = ev.touches.length,
+                options = inst.options;
+
+            // max touches
+            if(touches < options.swipeMinTouches ||
+                touches > options.swipeMaxTouches) {
+                return;
+            }
+
+            // when the distance we moved is too small we skip this gesture
+            // or we can be already in dragging
+            if(ev.velocityX > options.swipeVelocityX ||
+                ev.velocityY > options.swipeVelocityY) {
+                // trigger swipe events
+                inst.trigger(this.name, ev);
+                inst.trigger(this.name + ev.direction, ev);
+            }
+        }
     }
-  }
 };

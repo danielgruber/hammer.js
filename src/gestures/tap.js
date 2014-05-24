@@ -1,46 +1,111 @@
 /**
- * Tap/DoubleTap
- * Quick touch at a place or double at the same place
- * @events  tap, doubletap
+ * @module gestures
  */
-Hammer.gestures.Tap = {
-  name    : 'tap',
-  index   : 100,
-  defaults: {
-    tap_max_touchtime : 250,
-    tap_max_distance  : 10,
-    tap_always        : true,
-    doubletap_distance: 20,
-    doubletap_interval: 300
-  },
-  handler : function tapGesture(ev, inst) {
-    if(ev.eventType == Hammer.EVENT_MOVE && !Hammer.detection.current.reachedTapMaxDistance) {
-      //Track the distance we've moved. If it's above the max ONCE, remember that (fixes #406).
-      Hammer.detection.current.reachedTapMaxDistance = (ev.distance > inst.options.tap_max_distance);
-    } else if(ev.eventType == Hammer.EVENT_END && ev.srcEvent.type != 'touchcancel') {
-      // previous gesture, for the double tap since these are two different gesture detections
-      var prev = Hammer.detection.previous,
-        did_doubletap = false;
+/**
+ * Single tap and a double tap on a place
+ *
+ * @class Tap
+ * @static
+ */
+/**
+ * @event tap
+ * @param {Object} ev
+ */
+/**
+ * @event doubletap
+ * @param {Object} ev
+ */
 
-      // when the touchtime is higher then the max touch time
-      // or when the moving distance is too much
-      if(Hammer.detection.current.reachedTapMaxDistance || ev.deltaTime > inst.options.tap_max_touchtime) {
-        return;
-      }
+/**
+ * @param {String} name
+ */
+(function(name) {
+    var hasMoved = false;
 
-      // check if double tap
-      if(prev && prev.name == 'tap' &&
-        (ev.timeStamp - prev.lastEvent.timeStamp) < inst.options.doubletap_interval &&
-        ev.distance < inst.options.doubletap_distance) {
-        inst.trigger('doubletap', ev);
-        did_doubletap = true;
-      }
+    function tapGesture(ev, inst) {
+        var options = inst.options,
+            current = Detection.current,
+            prev = Detection.previous,
+            sincePrev,
+            didDoubleTap;
 
-      // do a single tap
-      if(!did_doubletap || inst.options.tap_always) {
-        Hammer.detection.current.name = 'tap';
-        inst.trigger(Hammer.detection.current.name, ev);
-      }
+        switch(ev.eventType) {
+            case EVENT_START:
+                hasMoved = false;
+                break;
+
+            case EVENT_MOVE:
+                hasMoved = hasMoved || (ev.distance > options.tapMaxDistance);
+                break;
+
+            case EVENT_END:
+                if(!Utils.inStr(ev.srcEvent.type, 'cancel') && ev.deltaTime < options.tapMaxTime && !hasMoved) {
+                    // previous gesture, for the double tap since these are two different gesture detections
+                    sincePrev = prev && prev.lastEvent && ev.timeStamp - prev.lastEvent.timeStamp;
+                    didDoubleTap = false;
+
+                    // check if double tap
+                    if(prev && prev.name == name &&
+                        (sincePrev && sincePrev < options.doubleTapInterval) &&
+                        ev.distance < options.doubleTapDistance) {
+                        inst.trigger('doubletap', ev);
+                        didDoubleTap = true;
+                    }
+
+                    // do a single tap
+                    if(!didDoubleTap || options.tapAlways) {
+                        current.name = name;
+                        inst.trigger(current.name, ev);
+                    }
+                }
+                break;
+        }
     }
-  }
-};
+
+    Hammer.gestures.Tap = {
+        name: name,
+        index: 100,
+        handler: tapGesture,
+        defaults: {
+            /**
+             * max time of a tap, this is for the slow tappers
+             * @property tapMaxTime
+             * @type {Number}
+             * @default 250
+             */
+            tapMaxTime: 250,
+
+            /**
+             * max distance of movement of a tap, this is for the slow tappers
+             * @property tapMaxDistance
+             * @type {Number}
+             * @default 10
+             */
+            tapMaxDistance: 10,
+
+            /**
+             * always trigger the `tap` event, even while double-tapping
+             * @property tapAlways
+             * @type {Boolean}
+             * @default true
+             */
+            tapAlways: true,
+
+            /**
+             * max distance between two taps
+             * @property doubleTapDistance
+             * @type {Number}
+             * @default 20
+             */
+            doubleTapDistance: 20,
+
+            /**
+             * max time between two taps
+             * @property doubleTapInterval
+             * @type {Number}
+             * @default 300
+             */
+            doubleTapInterval: 300
+        }
+    };
+})('tap');

@@ -1,44 +1,74 @@
 /**
- * Hold
- * Touch stays at the same place for x time
- * @events  hold
+ * @module gestures
  */
-Hammer.gestures.Hold = {
-  name    : 'hold',
-  index   : 10,
-  defaults: {
-    hold_timeout  : 500,
-    hold_threshold: 1
-  },
-  timer   : null,
-  handler : function holdGesture(ev, inst) {
-    switch(ev.eventType) {
-      case Hammer.EVENT_START:
-        // clear any running timers
-        clearTimeout(this.timer);
+/**
+ * Touch stays at the same place for x time
+ *
+ * @class Hold
+ * @static
+ */
+/**
+ * @event hold
+ * @param {Object} ev
+ */
 
-        // set the gesture so we can check in the timeout if it still is
-        Hammer.detection.current.name = this.name;
+/**
+ * @param {String} name
+ */
+(function(name) {
+    var timer;
 
-        // set timer and if after the timeout it still is hold,
-        // we trigger the hold event
-        this.timer = setTimeout(function() {
-          if(Hammer.detection.current.name == 'hold') {
-            inst.trigger('hold', ev);
-          }
-        }, inst.options.hold_timeout);
-        break;
+    function holdGesture(ev, inst) {
+        var options = inst.options,
+            current = Detection.current;
 
-      // when you move or end we clear the timer
-      case Hammer.EVENT_MOVE:
-        if(ev.distance > inst.options.hold_threshold) {
-          clearTimeout(this.timer);
+        switch(ev.eventType) {
+            case EVENT_START:
+                clearTimeout(timer);
+
+                // set the gesture so we can check in the timeout if it still is
+                current.name = name;
+
+                // set timer and if after the timeout it still is hold,
+                // we trigger the hold event
+                timer = setTimeout(function() {
+                    if(current && current.name == name) {
+                        inst.trigger(name, ev);
+                    }
+                }, options.holdTimeout);
+                break;
+
+            case EVENT_MOVE:
+                if(ev.distance > options.holdThreshold) {
+                    clearTimeout(timer);
+                }
+                break;
+
+            case EVENT_RELEASE:
+                clearTimeout(timer);
+                break;
         }
-        break;
-
-      case Hammer.EVENT_END:
-        clearTimeout(this.timer);
-        break;
     }
-  }
-};
+
+    Hammer.gestures.Hold = {
+        name: name,
+        index: 10,
+        defaults: {
+            /**
+             * @property holdTimeout
+             * @type {Number}
+             * @default 500
+             */
+            holdTimeout: 500,
+
+            /**
+             * movement allowed while holding
+             * @property holdThreshold
+             * @type {Number}
+             * @default 2
+             */
+            holdThreshold: 2
+        },
+        handler: holdGesture
+    };
+})('hold');

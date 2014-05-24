@@ -1,88 +1,120 @@
 /**
- * Transform
- * User want to scale or rotate with 2 fingers
- * @events  transform, pinch, pinchin, pinchout, rotate
+ * @module gestures
  */
-Hammer.gestures.Transform = {
-  name     : 'transform',
-  index    : 45,
-  defaults : {
-    // factor, no scale is 1, zoomin is to 0 and zoomout until higher then 1
-    transform_min_scale   : 0.01,
-    // rotation in degrees
-    transform_min_rotation: 1,
-    // prevent default browser behavior when two touches are on the screen
-    // but it makes the element a blocking element
-    // when you are using the transform gesture, it is a good practice to set this true
-    transform_always_block: false
-  },
-  triggered: false,
-  handler  : function transformGesture(ev, inst) {
-    // current gesture isnt drag, but dragged is true
-    // this means an other gesture is busy. now call dragend
-    if(Hammer.detection.current.name != this.name && this.triggered) {
-      inst.trigger(this.name + 'end', ev);
-      this.triggered = false;
-      return;
+/**
+ * User want to scale or rotate with 2 fingers
+ * Preventing the default browser behavior is a good way to improve feel and working. This can be done with the
+ * `preventDefault` option.
+ *
+ * @class Transform
+ * @static
+ */
+/**
+ * @event transform
+ * @param {Object} ev
+ */
+/**
+ * @event transformstart
+ * @param {Object} ev
+ */
+/**
+ * @event transformend
+ * @param {Object} ev
+ */
+/**
+ * @event pinchin
+ * @param {Object} ev
+ */
+/**
+ * @event pinchout
+ * @param {Object} ev
+ */
+/**
+ * @event rotate
+ * @param {Object} ev
+ */
+
+/**
+ * @param {String} name
+ */
+(function(name) {
+    var triggered = false;
+
+    function transformGesture(ev, inst) {
+        switch(ev.eventType) {
+            case EVENT_START:
+                triggered = false;
+                break;
+
+            case EVENT_MOVE:
+                // at least multitouch
+                if(ev.touches.length < 2) {
+                    return;
+                }
+
+                var scaleThreshold = Math.abs(1 - ev.scale);
+                var rotationThreshold = Math.abs(ev.rotation);
+
+                // when the distance we moved is too small we skip this gesture
+                // or we can be already in dragging
+                if(scaleThreshold < inst.options.transformMinScale &&
+                    rotationThreshold < inst.options.transformMinRotation) {
+                    return;
+                }
+
+                // we are transforming!
+                Detection.current.name = name;
+
+                // first time, trigger dragstart event
+                if(!triggered) {
+                    inst.trigger(name + 'start', ev);
+                    triggered = true;
+                }
+
+                inst.trigger(name, ev); // basic transform event
+
+                // trigger rotate event
+                if(rotationThreshold > inst.options.transformMinRotation) {
+                    inst.trigger('rotate', ev);
+                }
+
+                // trigger pinch event
+                if(scaleThreshold > inst.options.transformMinScale) {
+                    inst.trigger('pinch', ev);
+                    inst.trigger('pinch' + (ev.scale < 1 ? 'in' : 'out'), ev);
+                }
+                break;
+
+            case EVENT_RELEASE:
+                if(triggered && ev.changedLength < 2) {
+                    inst.trigger(name + 'end', ev);
+                    triggered = false;
+                }
+                break;
+        }
     }
 
-    // atleast multitouch
-    if(ev.touches.length < 2) {
-      return;
-    }
+    Hammer.gestures.Transform = {
+        name: name,
+        index: 45,
+        defaults: {
+            /**
+             * minimal scale factor, no scale is 1, zoomin is to 0 and zoomout until higher then 1
+             * @property transformMinScale
+             * @type {Number}
+             * @default 0.01
+             */
+            transformMinScale: 0.01,
 
-    // prevent default when two fingers are on the screen
-    if(inst.options.transform_always_block) {
-      ev.preventDefault();
-    }
+            /**
+             * rotation in degrees
+             * @property transformMinRotation
+             * @type {Number}
+             * @default 1
+             */
+            transformMinRotation: 1
+        },
 
-    switch(ev.eventType) {
-      case Hammer.EVENT_START:
-        this.triggered = false;
-        break;
-
-      case Hammer.EVENT_MOVE:
-        var scale_threshold = Math.abs(1 - ev.scale);
-        var rotation_threshold = Math.abs(ev.rotation);
-
-        // when the distance we moved is too small we skip this gesture
-        // or we can be already in dragging
-        if(scale_threshold < inst.options.transform_min_scale &&
-          rotation_threshold < inst.options.transform_min_rotation) {
-          return;
-        }
-
-        // we are transforming!
-        Hammer.detection.current.name = this.name;
-
-        // first time, trigger dragstart event
-        if(!this.triggered) {
-          inst.trigger(this.name + 'start', ev);
-          this.triggered = true;
-        }
-
-        inst.trigger(this.name, ev); // basic transform event
-
-        // trigger rotate event
-        if(rotation_threshold > inst.options.transform_min_rotation) {
-          inst.trigger('rotate', ev);
-        }
-
-        // trigger pinch event
-        if(scale_threshold > inst.options.transform_min_scale) {
-          inst.trigger('pinch', ev);
-          inst.trigger('pinch' + ((ev.scale < 1) ? 'in' : 'out'), ev);
-        }
-        break;
-
-      case Hammer.EVENT_END:
-        // trigger dragend
-        if(this.triggered) {
-          inst.trigger(this.name + 'end', ev);
-        }
-
-        this.triggered = false;
-        break;
-    }
-  }
-};
+        handler: transformGesture
+    };
+})('transform');

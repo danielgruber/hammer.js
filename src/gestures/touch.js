@@ -1,34 +1,50 @@
 /**
- * Touch
- * Called as first, tells the user has touched the screen
- * @events  touch
+ * @module gestures
+ */
+/**
+ * when a touch is being touched at the page
+ *
+ * @class Touch
+ * @static
+ */
+/**
+ * @event touch
+ * @param {Object} ev
  */
 Hammer.gestures.Touch = {
-  name    : 'touch',
-  index   : -Infinity,
-  defaults: {
-    // call preventDefault at touchstart, and makes the element blocking by
-    // disabling the scrolling of the page, but it improves gestures like
-    // transforming and dragging.
-    // be careful with using this, it can be very annoying for users to be stuck
-    // on the page
-    prevent_default    : false,
+    name: 'touch',
+    index: -Infinity,
+    defaults: {
+        /**
+         * call preventDefault at touchstart, and makes the element blocking by disabling the scrolling of the page,
+         * but it improves gestures like transforming and dragging.
+         * be careful with using this, it can be very annoying for users to be stuck on the page
+         * @property preventDefault
+         * @type {Boolean}
+         * @default false
+         */
+        preventDefault: false,
 
-    // disable mouse events, so only touch (or pen!) input triggers events
-    prevent_mouseevents: false
-  },
-  handler : function touchGesture(ev, inst) {
-    if(inst.options.prevent_mouseevents && ev.pointerType == Hammer.POINTER_MOUSE) {
-      ev.stopDetect();
-      return;
-    }
+        /**
+         * disable mouse events, so only touch (or pen!) input triggers events
+         * @property preventMouse
+         * @type {Boolean}
+         * @default false
+         */
+        preventMouse: false
+    },
+    handler: function touchGesture(ev, inst) {
+        if(inst.options.preventMouse && ev.pointerType == POINTER_MOUSE) {
+            ev.stopDetect();
+            return;
+        }
 
-    if(inst.options.prevent_default) {
-      ev.preventDefault();
-    }
+        if(inst.options.preventDefault) {
+            ev.preventDefault();
+        }
 
-    if(ev.eventType == Hammer.EVENT_START) {
-      inst.trigger(this.name, ev);
+        if(ev.eventType == EVENT_TOUCH) {
+            inst.trigger('touch', ev);
+        }
     }
-  }
 };

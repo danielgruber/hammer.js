@@ -2,7 +2,6 @@ module.exports = (grunt) ->
   grunt.initConfig
     pkg: grunt.file.readJSON 'package.json'
 
-    # meta options
     meta:
       banner: '
 /*! <%= pkg.title || pkg.name %> - v<%= pkg.version %> - <%= grunt.template.today("yyyy-mm-dd") %>\n
@@ -11,102 +10,82 @@ module.exports = (grunt) ->
  * Copyright (c) <%= grunt.template.today("yyyy") %> <%= pkg.author.name %> <<%= pkg.author.email %>>;\n
  * Licensed under the <%= _.pluck(pkg.licenses, "type").join(", ") %> license */\n\n'
 
-    # concat src files
     concat:
       options:
         separator: '\n\n'
-      dist:
+      build:
         options:
           banner: '<%= meta.banner %>'
         src: [
-          'src/intro.js'
-          'src/core.js'
+          'src/hammer.prefix'
           'src/setup.js'
           'src/utils.js'
-          'src/instance.js'
           'src/event.js'
           'src/pointerevent.js'
           'src/detection.js'
+          'src/instance.js'
           'src/gestures/*.js'
-          'src/outro.js']
+          'src/export.js'
+          'src/hammer.suffix']
         dest: 'hammer.js'
 
-    # minify the sourcecode
     uglify:
       options:
         report: 'gzip'
         sourceMap: 'hammer.min.map'
         banner: '<%= meta.banner %>'
-      dist:
+      build:
         files:
           'hammer.min.js': ['hammer.js']
 
-    # check for optimisations and errors
+    'string-replace':
+      version:
+        files:
+          'hammer.js': 'hammer.js'
+        options:
+          replacements: [
+              pattern: '{{PKG_VERSION}}'
+              replacement: '<%= pkg.version %>'
+            ]
+
     jshint:
       options:
-        curly: true
-        expr: true
-        newcap: true
-        quotmark: 'single'
-        regexdash: true
-        trailing: true
-        undef: true
-        unused: true
-        maxerr: 100
-        eqnull: true
-        sub: false
-        browser: true
-        node: true
-        strict: true
-        laxcomma: true
-        globals:
-          define: false
-      dist:
-        src: ['hammer.js']
+        jshintrc: true
+      build:
+        src: ['hammer.js', 'plugins/*.js']
 
-    # watch for changes
+    jscs:
+      src: ['src/**/*.js', 'plugins/**/*.js']
+      options:
+        force: true
+
     watch:
       scripts:
         files: ['src/**/*.js']
-        tasks: ['concat']
+        tasks: ['concat','string-replace','uglify','jshint','jscs']
         options:
           interrupt: true
 
-    # simple node server
     connect:
       server:
         options:
-          directory: "."
           hostname: "0.0.0.0"
-      
-    # tests
+          port: 8000
+
     qunit:
-      all: ['tests/**/*.html']
+      all: ['tests/unit/**/*.html']
 
-    # saucelabs tests
-    'saucelabs-qunit':
-      all:
+    yuidoc:
+      build:
+        name: '<%= pkg.title %>'
+        description: '<%= pkg.description %>'
+        version: '<%= pkg.version %>'
+        url: '<%= pkg.homepage %>'
         options:
-          username: 'hammerjs-ci'
-          key: '2ede6d02-65b3-4ba9-aec8-44a787af0c81'
-          build: process.env.TRAVIS_JOB_ID || 'dev'
-          concurrency: 3
-
-          urls: [
-            'http://0.0.0.0:8000/tests/utils.html',
-            'http://0.0.0.0:8000/tests/mouseevents.html',
-            'http://0.0.0.0:8000/tests/mousetouchevents.html',
-            'http://0.0.0.0:8000/tests/touchevents.html',
-            'http://0.0.0.0:8000/tests/pointerevents_mouse.html',
-            'http://0.0.0.0:8000/tests/pointerevents_touch.html'
-          ]
-          browsers: [
-            { browserName: 'chrome' }
-            { browserName: 'firefox' }
-            { browserName: 'internet explorer', platform: 'Windows 7', version: '9' }
-            { browserName: 'internet explorer', platform: 'Windows 8', version: '10'}
-          ]
-
+          linkNatives: true
+          paths: 'src/'
+          outdir: 'docs/'
+          themedir: 'misc/docstheme/'
 
   # Load tasks
   grunt.loadNpmTasks 'grunt-contrib-concat'
@@ -115,11 +94,12 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-contrib-jshint'
   grunt.loadNpmTasks 'grunt-contrib-connect'
   grunt.loadNpmTasks 'grunt-contrib-qunit'
-  grunt.loadNpmTasks 'grunt-saucelabs'
-
+  grunt.loadNpmTasks 'grunt-contrib-yuidoc'
+  grunt.loadNpmTasks 'grunt-string-replace'
+  grunt.loadNpmTasks 'grunt-jscs-checker'
 
   # Default task(s).
   grunt.registerTask 'default', ['connect','watch']
-  grunt.registerTask 'build', ['concat','uglify','test']
-  grunt.registerTask 'test', ['jshint','qunit']
-  grunt.registerTask 'test-travis', ['build','jshint']
+  grunt.registerTask 'build', ['concat','string-replace','uglify','yuidoc','test']
+  grunt.registerTask 'test', ['jshint','jscs','qunit']
+  grunt.registerTask 'test-travis', ['build']
